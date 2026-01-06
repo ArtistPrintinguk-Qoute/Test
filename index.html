@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Printing - Reception</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .error-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-slate-900 h-screen flex justify-center items-center">
+
+    <div id="historyModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center backdrop-blur-sm" onclick="closeHistoryModal()">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl space-y-4" onclick="event.stopPropagation()">
+            <div class="text-center mb-6">
+                <span class="text-4xl">📂</span>
+                <h3 class="text-xl font-black text-slate-900 uppercase italic tracking-tighter mt-2">Select Archive</h3>
+                <p class="text-xs text-slate-400 uppercase tracking-widest">View past quotes without login</p>
+            </div>
+            
+            <button onclick="window.location.href='vinyl-history.html'" class="w-full py-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-100 hover:border-blue-500 rounded-xl font-bold text-blue-800 transition-all uppercase tracking-widest text-xs flex justify-between px-6 items-center">
+                <span>Rolls / Vinyls</span>
+                <span>→</span>
+            </button>
+            
+            <button onclick="alert('Business Card Engine not built yet')" class="w-full py-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold text-slate-300 cursor-not-allowed uppercase tracking-widest text-xs">
+                Business Cards (Soon)
+            </button>
+        </div>
+    </div>
+
+    <section class="relative w-full max-w-md p-6">
+        <button onclick="openHistoryModal()" class="absolute top-10 left-10 w-14 h-14 bg-white border-2 border-gray-100 rounded-full flex items-center justify-center hover:border-blue-500 transition-all shadow-sm z-10">
+            <span class="text-2xl">📂</span>
+        </button>
+
+        <div class="bg-gray-50 p-12 rounded-[40px] shadow-2xl border border-gray-200 space-y-10 relative z-0">
+            <div class="flex flex-col items-center gap-4">
+                <div class="h-20 w-full flex items-center justify-center">
+                    <img src="Artist logo.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" alt="Artist Printing Logo" class="h-20 w-auto object-contain">
+                    <h2 class="hidden text-3xl">🎨</h2>
+                </div>
+                <div class="text-center border-b-4 border-slate-900 pb-2 px-6">
+                    <h1 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Artist <span class="text-blue-600">Printing</span></h1>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Staff Member <span class="text-red-500">*</span></label>
+                    <select id="staff" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-semibold focus:border-blue-500 appearance-none transition-all cursor-pointer">
+                        <option value="" selected disabled>Select Name...</option>
+                        <option value="Kaushik">Kaushik</option>
+                        <option value="Harshal">Harshal</option>
+                        <option value="Purva">Purva</option>
+                        <option value="Canny">Canny</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Customer / Company <span class="text-red-500">*</span></label>
+                    <input type="text" id="customer" placeholder="Enter name..." class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-blue-500 transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Work Type <span class="text-red-500">*</span></label>
+                    <select id="workType" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold focus:border-blue-500 appearance-none transition-all cursor-pointer">
+                        <option value="" selected disabled>Select Type...</option>
+                        <option value="vinyl">Banners / Vinyl Printing</option>
+                        <option value="cards" disabled>Business Cards (Coming Soon)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="startSession()" class="w-full py-6 rounded-full border-4 border-slate-900 text-slate-900 text-xl font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all active:scale-95 shadow-lg">
+                Enter Engine →
+            </button>
+        </div>
+    </section>
+
+    <script>
+        // Modal Logic
+        function openHistoryModal() { document.getElementById('historyModal').classList.remove('hidden'); }
+        function closeHistoryModal() { document.getElementById('historyModal').classList.add('hidden'); }
+
+        // Login / Routing Logic
+        function startSession() {
+            const staff = document.getElementById('staff');
+            const customer = document.getElementById('customer');
+            const type = document.getElementById('workType');
+
+            // Validation (Red Shake)
+            let err = false;
+            [staff, customer, type].forEach(el => {
+                if(!el.value || el.value.trim() === '') {
+                    el.classList.add('error-shake');
+                    err = true;
+                } else {
+                    el.classList.remove('error-shake');
+                }
+            });
+
+            if(err) {
+                setTimeout(() => [staff, customer, type].forEach(el => el.classList.remove('error-shake')), 500);
+                return;
+            }
+
+            // Save session
+            const sessionData = { staff: staff.value, customer: customer.value };
+            localStorage.setItem('artist_session', JSON.stringify(sessionData));
+
+            // Redirect based on Work Type
+            if(type.value === 'vinyl') {
+                window.location.href = 'vinyl-engine.html';
+            }
+        }
+    </script>
+</body>
+</html>
