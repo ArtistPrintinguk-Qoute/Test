@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Printing - Pro Nesting Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Blueprint styling */
+        .blueprint-grid {
+            background-color: #0f172a;
+            background-image: 
+                linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        #canvasViewport { overflow: auto; cursor: grab; }
+        #canvasViewport:active { cursor: grabbing; }
+        .item-box { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Red Border for Roll Limit */
+        .roll-boundary {
+            border-right: 2px dashed #ef4444;
+            position: relative;
+        }
+        .roll-boundary::after {
+            content: 'ROLL EDGE';
+            position: absolute;
+            right: -4px;
+            top: 0;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            writing-mode: vertical-rl;
+            border-bottom-left-radius: 4px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen p-4 md:p-8">
+
+    <div class="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-8 h-[calc(100vh-4rem)]">
+        
+        <div class="w-full xl:w-96 bg-slate-800 p-6 rounded-3xl border border-slate-700 flex flex-col shrink-0 h-full overflow-hidden">
+            <h2 class="text-xl font-black text-blue-400 uppercase italic mb-4 flex items-center gap-2">
+                <span>🧠</span> Smart Nesting
+            </h2>
+
+            <div class="mb-4 bg-slate-900/50 p-4 rounded-xl border border-slate-700 space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Material Category</label>
+                    <select id="material" onchange="updateTypes()" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-white text-xs mt-1 outline-none">
+                        <option value="" selected disabled>Select...</option>
+                        <option value="Vinyl">Vinyl Printing</option>
+                        <option value="Banners">Banners (Roll)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Roll Size</label>
+                    <select id="materialType" onchange="setRollWidth()" disabled class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-white text-xs mt-1 outline-none disabled:opacity-50">
+                        <option value="" selected disabled>Choose Material First</option>
+                    </select>
+                </div>
+                <input type="hidden" id="rollWidth" value="1370">
+            </div>
+
+            <div class="space-y-3 border-t border-slate-700 pt-4 mb-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Label (Optional)</label>
+                    <input type="text" id="itemName" placeholder="e.g. Logo A" class="w-full bg-slate-700 rounded-lg p-2 text-xs mb-2 border border-transparent focus:border-blue-500 outline-none">
+                </div>
+                
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Width</label>
+                        <div class="flex">
+                            <input type="number" id="itemW" placeholder="0" class="w-full bg-slate-700 rounded-l-lg p-2 text-sm border-r border-slate-600 outline-none">
+                            <select id="unitW" class="bg-slate-600 text-[10px] rounded-r-lg px-1 outline-none">
+                                <option value="mm">mm</option><option value="cm">cm</option><option value="ft">ft</option><option value="in">in</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Height</label>
+                        <div class="flex">
+                            <input type="number" id="itemH" placeholder="0" class="w-full bg-slate-700 rounded-l-lg p-2 text-sm border-r border-slate-600 outline-none">
+                            <select id="unitH" class="bg-slate-600 text-[10px] rounded-r-lg px-1 outline-none">
+                                <option value="mm">mm</option><option value="cm">cm</option><option value="ft">ft</option><option value="in">in</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <div class="w-24">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Gap</label>
+                        <div class="flex">
+                            <input type="number" id="itemGap" value="5" class="w-full bg-slate-700 rounded-l-lg p-2 text-sm border-r border-slate-600 outline-none">
+                            <select id="unitGap" class="bg-slate-600 text-[10px] rounded-r-lg px-1 outline-none">
+                                <option value="mm">mm</option><option value="cm">cm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Qty</label>
+                        <input type="number" id="itemQty" value="1" min="1" class="w-full bg-slate-700 rounded-lg p-2 text-sm outline-none text-center font-bold text-blue-400">
+                    </div>
+                </div>
+
+                <button onclick="addItem()" class="w-full bg-blue-600 hover:bg-blue-500 h-[38px] mt-2 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg active:scale-95">
+                    + Add Shapes
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-2 space-y-2" id="itemsList"></div>
+            
+            <div class="mt-4 pt-4 border-t border-slate-700">
+                 <button onclick="resetAll()" class="w-full bg-red-900/30 hover:bg-red-900/50 text-red-200 py-3 rounded-xl font-bold uppercase text-xs tracking-widest border border-red-900/50 transition-all">
+                    Reset Canvas
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col h-full min-h-[600px]">
+            <div class="flex flex-wrap gap-6 justify-between items-end mb-4 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Roll Length Used</p>
+                    <h2 class="text-4xl font-black text-green-400 italic" id="totalHeightDisplay">0 mm</h2>
+                </div>
+                
+                <div class="flex gap-8">
+                    <div class="text-right">
+                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Shapes</p>
+                        <h2 class="text-xl font-bold text-white" id="countDisplay">0</h2>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Efficiency</p>
+                        <h2 class="text-xl font-bold text-blue-400" id="efficiencyDisplay">0%</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-2 px-2">
+                <div class="text-xs text-slate-500 font-mono">
+                    ROLL: <span id="canvasDimLabel" class="text-blue-400 font-bold">Not Selected</span>
+                </div>
+                <div class="flex items-center gap-3 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                    <span class="text-xs text-slate-400">🔍</span>
+                    <input type="range" min="0.1" max="2" step="0.1" value="0.5" id="zoomSlider" oninput="updateZoom(this.value)" class="w-32 accent-blue-500 cursor-pointer">
+                    <span class="text-xs font-mono w-8 text-right" id="zoomLabel">50%</span>
+                </div>
+            </div>
+
+            <div id="canvasViewport" class="flex-1 bg-slate-900 rounded-xl border-x-4 border-slate-700 relative shadow-2xl blueprint-grid">
+                
+                <div id="nestingCanvas" class="relative origin-top-left transition-transform duration-200 ease-out roll-boundary" style="width: 100px; height: 1000px; transform: scale(0.5);">
+                    </div>
+
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- DATABASE MOCK (Same as Engine) ---
+    const materialData = {
+        "Vinyl": {
+            "mono 1370": { widthFt: 4.5 },
+            "mono maric 1050": { widthFt: 3.5 },
+            "mono 1600": { widthFt: 5.0 },
+            "POLYMERIC Vinyl 7 YEAR": { widthFt: 4.5 }
+        },
+        "Banners": {
+            "FLEX BANNER": { widthFt: 4.5 },
+            "flex banner 1.6M": { widthFt: 5.0 },
+            "Premium 440gsm PVC Banner": { widthFt: 3.5 }
+        }
+    };
+
+    let items = [];
+    let currentZoom = 0.5;
+
+    window.onload = () => { updateZoom(0.5); };
+
+    // --- MATERIAL SELECTION LOGIC ---
+    function updateTypes() {
+        const mat = document.getElementById('material').value;
+        const t = document.getElementById('materialType'); 
+        t.innerHTML = '<option value="" selected disabled>Choose Type...</option>'; 
+        t.disabled = false;
+        
+        if(materialData[mat]) {
+            Object.keys(materialData[mat]).forEach(k => { 
+                const opt = document.createElement("option"); 
+                opt.value = k; 
+                opt.textContent = `${k.toUpperCase()} (${materialData[mat][k].widthFt} FT)`; 
+                t.appendChild(opt); 
+            });
+        }
+    }
+
+    function setRollWidth() {
+        const mat = document.getElementById('material').value;
+        const type = document.getElementById('materialType').value;
+        if(mat && type) {
+            const widthFt = materialData[mat][type].widthFt;
+            const widthMm = (widthFt * 304.8).toFixed(0); // Convert FT to MM
+            document.getElementById('rollWidth').value = widthMm;
+            document.getElementById('canvasDimLabel').innerText = `${widthMm}mm (${type})`;
+            reCalculate();
+        }
+    }
+
+    // --- CONVERSION HELPER ---
+    function convertToMm(val, unit) {
+        val = parseFloat(val);
+        if(isNaN(val)) return 0;
+        if(unit === 'mm') return val;
+        if(unit === 'cm') return val * 10;
+        if(unit === 'm') return val * 1000;
+        if(unit === 'in') return val * 25.4;
+        if(unit === 'ft') return val * 304.8;
+        return val;
+    }
+
+    // --- ADD / REMOVE LOGIC ---
+
+    function addItem() {
+        // 1. Get raw inputs
+        const rawW = document.getElementById('itemW').value;
+        const rawH = document.getElementById('itemH').value;
+        const rawGap = document.getElementById('itemGap').value;
+        const qty = parseInt(document.getElementById('itemQty').value) || 1;
+        const nameBase = document.getElementById('itemName').value || `Shape`;
+
+        // 2. Convert units to MM
+        const wMm = convertToMm(rawW, document.getElementById('unitW').value);
+        const hMm = convertToMm(rawH, document.getElementById('unitH').value);
+        const gapMm = convertToMm(rawGap, document.getElementById('unitGap').value);
+
+        if(!wMm || !hMm) return alert("Please enter valid width and height");
+
+        // 3. Add Multiple Items based on Qty
+        for(let i=0; i<qty; i++) {
+            items.push({ 
+                id: Date.now() + i, // Unique ID per item
+                name: qty > 1 ? `${nameBase} #${i+1}` : nameBase,
+                w: wMm, 
+                h: hMm, 
+                gap: gapMm,
+                totalW: wMm + gapMm, 
+                totalH: hMm + gapMm,
+                x: 0, y: 0
+            });
+        }
+
+        // 4. Reset Basic Fields (Leave Units/Gap as they are usually reused)
+        document.getElementById('itemW').value = '';
+        document.getElementById('itemH').value = '';
+        document.getElementById('itemQty').value = '1';
+        document.getElementById('itemName').value = '';
+
+        renderList();
+        reCalculate();
+    }
+
+    function removeItem(id) {
+        items = items.filter(i => i.id !== id);
+        renderList();
+        reCalculate();
+    }
+
+    function resetAll() {
+        if(confirm("Clear all shapes?")) {
+            items = [];
+            renderList();
+            reCalculate();
+        }
+    }
+
+    function renderList() {
+        const container = document.getElementById('itemsList');
+        // Group items for display if list gets huge? For now, list all.
+        // Optimization: Show "X Items Hidden" if > 50?
+        
+        if(items.length === 0) {
+            container.innerHTML = '<div class="h-full flex flex-col items-center justify-center opacity-30 italic text-xs"><span class="text-2xl mb-2">📐</span>Add shapes to begin</div>';
+            return;
+        }
+
+        // Show simplified list (Last 50 items only for DOM performance)
+        const displayItems = items.slice(-50).reverse(); 
+        
+        container.innerHTML = displayItems.map((item) => `
+            <div class="bg-slate-700/40 hover:bg-slate-700/80 p-2 rounded-lg flex justify-between items-center border border-slate-600 transition-colors group">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                    <span class="text-[10px] font-bold text-white truncate max-w-[80px]">${item.name}</span>
+                    <span class="text-[9px] text-slate-400 ml-1 font-mono">${Math.round(item.w)}x${Math.round(item.h)}</span>
+                </div>
+                <button onclick="removeItem(${item.id})" class="text-slate-500 hover:text-red-400 transition-colors p-1">✕</button>
+            </div>
+        `).join('') + (items.length > 50 ? `<div class="text-[9px] text-center text-slate-500 italic">+ ${items.length - 50} older items</div>` : '');
+    }
+
+    function updateZoom(val) {
+        currentZoom = parseFloat(val);
+        document.getElementById('zoomLabel').innerText = Math.round(currentZoom * 100) + '%';
+        document.getElementById('nestingCanvas').style.transform = `scale(${currentZoom})`;
+    }
+
+    // --- NESTING ENGINE ---
+    
+    function reCalculate() {
+        const rollWidth = parseFloat(document.getElementById('rollWidth').value);
+        
+        // Update Canvas Visual Size (Red Border)
+        document.getElementById('nestingCanvas').style.width = `${rollWidth}px`;
+
+        if(items.length === 0) {
+            document.getElementById('totalHeightDisplay').innerText = "0 mm";
+            document.getElementById('efficiencyDisplay').innerText = "0%";
+            document.getElementById('countDisplay').innerText = "0";
+            document.getElementById('nestingCanvas').innerHTML = '';
+            document.getElementById('nestingCanvas').style.height = '600px';
+            return;
+        }
+
+        // Sort: Tallest first
+        let processItems = [...items].sort((a, b) => b.totalH - a.totalH);
+
+        let placedRects = [];
+        let maxY = 0;
+        let usedArea = 0;
+
+        processItems.forEach(item => {
+            let bestSpot = findPosition(item, placedRects, rollWidth);
+            item.x = bestSpot.x;
+            item.y = bestSpot.y;
+            
+            placedRects.push({ x: item.x, y: item.y, w: item.totalW, h: item.totalH });
+            usedArea += (item.w * item.h);
+            const bottomEdge = item.y + item.totalH;
+            if(bottomEdge > maxY) maxY = bottomEdge;
+        });
+
+        drawCanvas(processItems, maxY);
+        
+        document.getElementById('totalHeightDisplay').innerText = `${Math.ceil(maxY)} mm`;
+        document.getElementById('countDisplay').innerText = items.length;
+        const totalArea = rollWidth * maxY;
+        const efficiency = maxY > 0 ? ((usedArea / totalArea) * 100).toFixed(1) : 0;
+        document.getElementById('efficiencyDisplay').innerText = `${efficiency}%`;
+    }
+
+    function findPosition(item, placedRects, rollWidth) {
+        let y = 0;
+        while(true) {
+            let x = 0;
+            // Scan X axis
+            while(x <= rollWidth - item.totalW) {
+                const collision = checkCollision(x, y, item.totalW, item.totalH, placedRects);
+                if(!collision) return { x, y };
+                x = collision.x + collision.w; 
+            }
+            // Move Y down to next available shelf
+            let nextY = Infinity;
+            let foundBlocker = false;
+            for(let r of placedRects) {
+                if (r.y + r.h > y) {
+                    if (r.y + r.h < nextY) nextY = r.y + r.h;
+                    foundBlocker = true;
+                }
+            }
+            if(foundBlocker && nextY !== Infinity) y = nextY;
+            else y += 10; 
+        }
+    }
+
+    function checkCollision(x, y, w, h, placedRects) {
+        for(let r of placedRects) {
+            if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) return r;
+        }
+        return null;
+    }
+
+    function drawCanvas(items, height) {
+        const canvas = document.getElementById('nestingCanvas');
+        canvas.innerHTML = '';
+        canvas.style.height = `${Math.max(height + 200, 800)}px`;
+
+        items.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'absolute item-box border border-dashed border-blue-500/30 flex flex-col items-center justify-center';
+            el.style.left = `${item.x}px`;
+            el.style.top = `${item.y}px`;
+            el.style.width = `${item.totalW}px`;
+            el.style.height = `${item.totalH}px`;
+            
+            // Inner Content
+            el.innerHTML = `
+                <div class="bg-blue-600/20 border border-blue-400 flex flex-col items-center justify-center text-center overflow-hidden relative shadow-[0_0_15px_rgba(59,130,246,0.1)]" 
+                     style="width: ${item.w}px; height: ${item.h}px;">
+                    <span class="text-[10px] font-bold text-white leading-none z-10 px-1 truncate w-full">${item.name}</span>
+                    <span class="text-[8px] font-mono text-blue-200 z-10 opacity-80">${Math.round(item.w)}x${Math.round(item.h)}</span>
+                </div>
+                ${item.gap > 0 ? `<div class="absolute top-0 right-0 bg-slate-700 text-[6px] px-1 rounded text-slate-300 opacity-50">Gap:${item.gap}</div>` : ''}
+            `;
+            canvas.appendChild(el);
+        });
+    }
+
+</script>
+</body>
+</html>
